@@ -3,7 +3,7 @@
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout } from "herdr";
+import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, nextCommand } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -87,6 +87,13 @@ function icon(p, size, color) {
 export default class Agents extends View {
   init(_props, cx) {
     this.folded = new Set();
+    // "ordered-agents.rail" (keys.json): flip between the rail and the full sidebar.
+    cx.spawn(async (cx) => {
+      for (;;) {
+        if ((await nextCommand()) === "rail") toggleSidebar();
+        cx.notify();
+      }
+    });
     // Each agent's last state and when it changed (ms), kept across restarts.
     try { this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}"); } catch { this.changed = {}; }
     if (!this.changed || typeof this.changed !== "object" || Array.isArray(this.changed)) this.changed = {};
@@ -276,22 +283,35 @@ export default class Agents extends View {
     }
 
     const row = (a, i, subs = []) => {
-      const pic = icon(a.program, 16, t.foreground);
+      const pic = icon(a.program, collapsed ? 18 : 16, t.foreground);
       const more = detail.get(a.address);
       // An agent on another machine (`vps/t7`) says which.
       const machine = a.address.includes("/") ? a.address.split("/")[0] : null;
       if (collapsed) {
+        // Rail row (same shape as chrc-spaces): number, a 34px tile whose border carries the
+        // state, and a status slot (spinner while working, "!" when it needs you).
+        const st = a.status === "error" ? "blocked" : a.status;
+        const tone = st === "idle" ? null : t[st];
         return h_flex()
           .id(`ag-${a.address}`)
-          .h(26)
-          .px(8)
           .flex_none()
+          .py(3)
+          .gap(5)
+          .justify_center()
           .items_center()
-          .gap(4)
-          .hover((s) => s.bg(t.hover))
+          .cursor_pointer()
           .on_click(() => run("pane.focus", { pane: a.pane }))
-          .child(div().flex_1().min_w(0).whitespace_nowrap().text_right().text_color(t.muted).child(String(i + 1)))
-          .child(h_flex().w(14).flex_none().items_center().justify_center().child(this.status(t, a, true)));
+          .tooltip(`${i + 1} · ${a.space_name || label(a)} · ${STATUS_TEXT[st] ?? st ?? ""}`)
+          .child(div().w(12).text_right().text_size(10).font_semibold().text_color(tone ?? (a.focused ? t.foreground : t.dim)).child(String(i + 1)))
+          .child(div().size(34).flex_none().rounded(9).flex().items_center().justify_center()
+            .bg(st === "blocked" ? t.blocked + "26" : a.focused ? t.selected : t.raised)
+            .border(1.5)
+            .border_color(tone ?? (a.focused ? t.accent : "#00000000"))
+            .hover((s) => s.bg(t.hover))
+            .child(pic ?? div().text_size(12).font_bold().text_color(t.foreground).child((a.space_name || "?")[0].toUpperCase())))
+          .child(h_flex().w(8).flex_none().justify_center()
+            .when(st === "working", (el) => el.child(svg("mods/workspace-chrome/spinner.svg").size(8).text_color(t.working).spin(900)))
+            .when(st === "blocked", (el) => el.child(div().text_size(10).font_bold().text_color(t.blocked).child("!"))));
       }
       const when = this.since(a);
       const idle = a.status === "idle" && !a.focused;

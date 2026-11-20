@@ -1,11 +1,15 @@
 {
   "global": {
-    "ctrl-b": "mod.open:tmux-prefix"
+    "ctrl-b": "mod.open:tmux-prefix",
+    "cmd-shift-b": "layout.toggle:sidebar"
   },
   "terminal": {
     "ctrl-b": "mod.open:tmux-prefix"
   },
   "mod:tmux-prefix": {
     "ctrl-b": "tmux-prefix.send-prefix"
+  },
+  "layout:chrc": {
+    "cmd-b": "ordered-agents.rail"
   }
 }

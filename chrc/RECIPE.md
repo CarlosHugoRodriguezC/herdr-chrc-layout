@@ -1,6 +1,6 @@
 # chrc
 
-A translucent Catppuccin Mocha window built for running several coding agents at once. On the left, a 268px sidebar shows spaces on top and a numbered agents list below, in the order the agents were opened and with each one's state spelled out ("Working", "Needs you", "Done", "Idle"). On the right, the active tab's panes float as rounded cards over a blurred desktop, with a tab bar above and a status bar below. `Ctrl+B` opens a tmux-style prefix with every shortcut grouped in columns and a `/` search; `Ctrl+B` then `a` opens a kanban board of all agents by state, driven with vim keys.
+A translucent Catppuccin Mocha window built for running several coding agents at once. On the left, a 268px sidebar shows spaces on top and a numbered agents list below, in the order the agents were opened and with each one's state spelled out ("Working", "Needs you", "Done", "Idle"). `⌘B` folds the sidebar into a 76px rail of matching tiles (numbered spaces and agents, state on each tile) instead of hiding it. On the right, the active tab's panes float as rounded cards over a blurred desktop, with a tab bar above and a status bar below. `Ctrl+B` opens a tmux-style prefix with every shortcut grouped in columns and a `/` search; `Ctrl+B` then `a` opens a kanban board of all agents by state, driven with vim keys.
 
 ![chrc](preview.png)
 
@@ -10,7 +10,7 @@ Left to right:
 
 1. **Sidebar** (268px, min 44, max 480, not drag-resizable, `chrome` background `#11111b73`):
    - **Brand bar** (46px, drags the window): the shipped `workspace-chrome` header (logo, search, sidebar toggle).
-   - **Spaces** (half of the remaining height, min 90px): the shipped `spaces` list with colored initials and the git branch.
+   - **Spaces** (half of the remaining height, min 90px): the `chrc-spaces` mod, the shipped `spaces` list (colored initials, git branch) with a reworked rail.
    - **Agents** (other half, min 90px): the `ordered-agents` mod.
      - Header row 41px: "Agents" (11.5px, medium, dim) on the left, "⌥1–9 after ^B" (11px, dim) on the right.
      - One card per agent, at least 48px tall, 8px radius, two lines:
@@ -37,7 +37,15 @@ The whole window uses no titlebar, macOS traffic lights at (12, 16), window blur
 - **done**: "Done"
 - **idle**: "Idle"
 
-When the sidebar is narrower than 160px it becomes a rail: each row shows only the number and a compact glyph. That is a spinning 12px spinner for working, a "!" badge for blocked, a filled dot for done and a hollow ring for idle.
+**The rail.** Any sidebar narrower than 160px is a rail. `⌘B`, `Ctrl+B b`, the brand bar's sidebar button and the `»` at its bottom all flip between the 76px rail and the width it had (268px by default). `⌘⇧B` or `Ctrl+B B` hide the sidebar completely.
+- **Same row everywhere.** Spaces and agents share one centered row shape: the number (10px, semibold, right-aligned in 12px), a 34px tile with 9px corners and a 1.5px border, and an 8px status slot on the right, with 5px gaps and 3px vertical padding.
+- **Space tiles.** A 20px rounded square in the space's color with its white initial (11px, bold), on a `raised` tile. The active space uses the `selected` background, an `accent` border and a foreground-colored number; the others have a transparent border and a dim number. A 6px dot in the status slot (the status color) shows when the space has something blocked or done.
+- **Agent tiles.** The program icon (18px) on a `raised` tile. The state lives on the tile:
+  - **working:** border and number in the working color, and an 8px spinner in the status slot.
+  - **blocked:** border and number in the blocked color, the tile tinted with it at 15%, and a bold "!" in the slot.
+  - **done:** border and number in the done color.
+  - **idle:** a plain tile with a dim number. The focused agent uses the `selected` background, and gets an `accent` border when idle.
+- **Hover and click.** Hovering a tile shows `1 · space name` for spaces and `1 · space name · Working` for agents. Clicking selects the space or focuses the agent's pane.
 
 **Order never shuffles.** Agents are listed by when their terminal was opened: local terminals first by terminal number (`t4` before `t10`), then each remote machine by name. A state change never moves a card. `agent.next` / `agent.prev` follow this same order.
 
@@ -51,7 +59,7 @@ When the sidebar is narrower than 160px it becomes a rail: each row shows only t
   - Panes: `v` split right, `-` or `"` split down, `x` close pane, `z` zoom, `h j k l` or arrows to focus (repeat), `H`/`L` swap (repeat).
   - Spaces: `]`/`[` next/previous (repeat), `N` new, `W` rename, `D` close.
   - Agents: `J`/`K` next/previous (repeat), `a` agents board, `⌥1–9` focus agent N (the sidebar's numbers).
-  - App: `w`/`g` picker, `b` sidebar toggle, `s` settings, `q`/`d` minimize, `⌥g` lazygit in a new terminal.
+  - App: `w`/`g` picker, `b` sidebar rail toggle, `B` hide the sidebar, `s` settings, `q`/`d` minimize, `⌥g` lazygit in a new terminal.
 - **Repeat window.** After a repeatable key the title reads "Repeat · 500 ms". For 500ms, repeatable keys work again without `Ctrl+B`, and other plain keys are typed into the focused terminal.
 - **Leaving.** `Ctrl+B` again sends a literal `Ctrl+B` to the terminal. `Esc` or any unbound key closes the popup.
 - **`/` search.** The title becomes `/query▏` and matches every key by its label or exact key, numbered and Alt keys included, with each match's group on the right. `↑↓` or `Ctrl+N/P` (or `Ctrl+J/K`) move the highlight, `Enter` runs it, `Backspace` edits, and `Esc` (or Backspace on an empty query) goes back to the grid.
@@ -70,20 +78,22 @@ When the sidebar is narrower than 160px it becomes a rail: each row shows only t
 ## Built from
 
 - **`layouts/chrc.json`**: a `row` with these children.
-  - `sidebar`, a column: `brand` block (`workspace-chrome`), `sidebar-lists` column (`spaces` block and `agents` block, weight 1 each), `sidebar-footer` block (`workspace-chrome` with props `{ "footer": true }`).
+  - `sidebar`, a column: `brand` block (`workspace-chrome`), `sidebar-lists` column (`spaces` block with `chrc-spaces` and `agents` block with `ordered-agents`, weight 1 each), `sidebar-footer` block (`workspace-chrome` with props `{ "footer": true }`).
   - `work`, a column: `tabs` block (`tabs`), `work-body` row, `status` block (`workspace-status`). The `work-body` row holds the `main` block (`content.tab: "active"` plus the pane settings above) and the `panel` column, which wraps a `panel-body` stack of `files` and `changes`.
-- **Shipped mods used:** `workspace-chrome`, `spaces`, `tabs`, `pane`, `files`, `changes`, `workspace-status`.
+- **Shipped mods used:** `workspace-chrome`, `tabs`, `pane`, `files`, `changes`, `workspace-status`.
+- **`mods/chrc-spaces`**: a clone of the shipped `spaces` mod (0.1.16). Only `compact()`, the rail row, is rewritten. It keeps the shipped behavior: it runs `git` (`exec`) in each space's folder for the branch and ahead/behind counts, and `hc` (`machine ls` and friends) for remote machines. It reads `shared("space.colors")`, which it also fills.
 - **`mods/ordered-agents`**: a clone of the shipped `agents` mod (0.1.16) with the sort menu, priority/space groups and pin-to-top removed.
   - Order and data: it sorts `agents()` by terminal number, hides sub-agents that a tree already shows, and calls `setAgentOrder(order)`. It publishes the order as `setShared("agents.order", addresses)`, but only when that list changed.
   - Status timing: it keeps each agent's last state change time in `localStorage` (`changed`).
   - Commands: `pane.focus`, `terminal.peek`, `terminal.pin` (only for migrating old pins), `layout.resize`.
+  - It loops on `nextCommand()`: the key command `ordered-agents.rail` resizes `sidebar` to 76px, or back to the width saved in `shared("sidebar.width")` (268 by default).
   - Other reads: `terminals()`, `panes()`, `spaces()`, `focused()`, `layout()`.
 - **`mods/tmux-prefix`**: an overlay-only mod (`place: none`, popup) opened by keys.
   - Inputs: it reads keys with `on_key_down` and loops on `nextCommand()` for the mod-scoped `tmux-prefix.send-prefix`.
   - Commands: `run(command, args)` for the bindings, `agent.focus` for `⌥1–9` (picking by `shared("agents.order")`, else by terminal number), `terminal.open` with argv `["lazygit"]`.
   - It runs the `hc keys <terminal> <key>` program to send the literal prefix and the keys typed in the repeat window.
 - **`mods/agents-board`**: an overlay-only mod (`place: none`, `dialog`). It reads `agents()`, `spaces()` and `shared("agents.order")`, and calls `pane.focus` and `closeOverlay`.
-- **`keys.json`**: `ctrl-b` → `mod.open:tmux-prefix` in `global` and `terminal`, and `ctrl-b` → `tmux-prefix.send-prefix` in `mod:tmux-prefix`.
+- **`keys.json`**: `ctrl-b` → `mod.open:tmux-prefix` in `global` and `terminal`, and `ctrl-b` → `tmux-prefix.send-prefix` in `mod:tmux-prefix`. `cmd-b` → `ordered-agents.rail` in `layout:chrc` (other layouts keep their own `cmd-b`), and `cmd-shift-b` → `layout.toggle:sidebar` in `global`.
 - No art beyond the shipped `mods/workspace-chrome/*.svg` icons (spinner, chevrons).
 
 ## Watch out
@@ -92,6 +102,9 @@ When the sidebar is narrower than 160px it becomes a rail: each row shows only t
 - **Sidebar sort.** The shipped `agents` mod defaults to its Priority sort, which reorders on every state change and broke "⌥1 = first card". That is why this layout uses its own clone.
 - **Opening order.** It is approximated by the terminal number in the address (`t4`, `vps/t7`). Herdr exposes no creation timestamp.
 - **gpui-kit methods.** There is no `line_clamp`; use `truncate()`. Check each style method against `gpui-kit.d.ts`.
+- **Rail badges.** A status badge pinned to the tile's corner clips against the rounded border and an idle ring reads as a hole, so put the state on the tile's border instead. A number under the tile looks loose; keep it on the left.
+- **Rail toggle.** `layout.toggle:sidebar` hides the sidebar outright. The rail is a width (`layout.resize` to 76px; under 160px every sidebar mod draws its compact form), so `⌘B` needs a mod command, not an app command.
+- **Rail spacing.** The 12 + 5 + 34 + 5 + 8px row is sized for the 76px macOS rail, whose brand bar also holds the traffic lights.
 - **Keys reach the terminal.** `Ctrl+B` has to be bound in both `global` and `terminal`, or the terminal program receives it.
 - **Numbered keys.** `⌥1–9` needs Option to act as Alt (Settings → Keyboard), and the `!–(` space keys assume a US layout.
 - **Lazygit.** `⌥g` assumes `lazygit` is installed.
@@ -105,4 +118,6 @@ When the sidebar is narrower than 160px it becomes a rail: each row shows only t
 - `Ctrl+B` then `⌥1` focuses the agent numbered 1 in the sidebar.
 - `Ctrl+B` shows all five columns with no scrolling. `/split` lists "Split right" and "Split down", and `Enter` splits the pane.
 - `Ctrl+B a` opens the board with each agent in its state's column. `l`, `j` and `Enter` move the cursor and focus the selected agent.
+- `⌘B` folds the sidebar to a 76px rail where the spaces and agents rows line up as number, tile and status slot. A working agent's tile has a working-colored border and a spinner. `⌘B` again restores the previous width.
+- `⌘⇧B` hides the sidebar completely.
 - `Ctrl+B` `Ctrl+B` sends a literal `Ctrl+B` to the focused terminal.
