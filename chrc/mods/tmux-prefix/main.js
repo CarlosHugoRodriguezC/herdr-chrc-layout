@@ -1,6 +1,6 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, closeOverlay, focused, hc, nextCommand, props, run, shared, theme } from "herdr";
+import { agents, closeOverlay, focused, hc, nextCommand, panes, props, run, shared, theme } from "herdr";
 
 // Edit these two things to make the example yours. Only repeatable actions
 // start a timer: the first key after Ctrl+B can take as long as you like.
@@ -8,6 +8,16 @@ const REPEAT_MS = 500;
 // Mirrors the Herdr TUI prefix keys (~/.config/herdr/config.toml [keys]).
 // Shifted digits follow a US layout: !@#$%^&*( select spaces 1-9.
 const SPACE_KEYS = "!@#$%^&*(";
+// Pane focus and swap are one-shot, so the popup closes at once and the focus
+// border comes back (Herdr only draws it while the pane has the keyboard).
+// To move or resize several times in a row, enter a sticky mode: it stays until Esc.
+const MOVE_MODE = "pane.move-mode";
+const RESIZE_MODE = "pane.resize-mode";
+const MODES = { [MOVE_MODE]: "move", [RESIZE_MODE]: "resize" };
+// pane.resize steps in px: plain keys, and Shift for fine-tuning.
+const RESIZE_PX = 40;
+const RESIZE_FINE_PX = 10;
+const MOVE_KEYS = { h: "left", j: "down", k: "up", l: "right", left: "left", down: "down", up: "up", right: "right" };
 const BINDINGS = [
   ["c", "New tab", "tab.new"],
   ["T", "Rename tab", "tab.rename"],
@@ -19,16 +29,18 @@ const BINDINGS = [
   ['"', "Split down", "pane.split", { direction: "down" }],
   ["x", "Close pane", "pane.close"],
   ["z", "Zoom pane", "pane.zoom"],
-  ["h", "Focus left", "pane.go", { direction: "left" }, true],
-  ["j", "Focus down", "pane.go", { direction: "down" }, true],
-  ["k", "Focus up", "pane.go", { direction: "up" }, true],
-  ["l", "Focus right", "pane.go", { direction: "right" }, true],
-  ["H", "Swap left", "pane.swap", { direction: "left" }, true],
-  ["L", "Swap right", "pane.swap", { direction: "right" }, true],
-  ["left", "Focus left", "pane.go", { direction: "left" }, true],
-  ["down", "Focus down", "pane.go", { direction: "down" }, true],
-  ["up", "Focus up", "pane.go", { direction: "up" }, true],
-  ["right", "Focus right", "pane.go", { direction: "right" }, true],
+  ["h", "Focus left", "pane.go", { direction: "left" }],
+  ["j", "Focus down", "pane.go", { direction: "down" }],
+  ["k", "Focus up", "pane.go", { direction: "up" }],
+  ["l", "Focus right", "pane.go", { direction: "right" }],
+  ["H", "Swap left", "pane.swap", { direction: "left" }],
+  ["L", "Swap right", "pane.swap", { direction: "right" }],
+  ["m", "Move mode (sticky)", MOVE_MODE],
+  ["r", "Resize mode (sticky)", RESIZE_MODE],
+  ["left", "Focus left", "pane.go", { direction: "left" }],
+  ["down", "Focus down", "pane.go", { direction: "down" }],
+  ["up", "Focus up", "pane.go", { direction: "up" }],
+  ["right", "Focus right", "pane.go", { direction: "right" }],
   ["J", "Next agent", "agent.next", {}, true],
   ["K", "Previous agent", "agent.prev", {}, true],
   ["]", "Next space", "space.next", {}, true],
@@ -96,6 +108,7 @@ export default class TmuxPrefix extends View {
     this.repeat = false;
     this.generation = 0;
     this.all = false;
+    this.mode = null;
     // "/" search: the query, and which match Enter runs.
     this.query = null;
     this.pick = 0;
@@ -142,6 +155,11 @@ export default class TmuxPrefix extends View {
     else if (e.key === "enter") {
       const [, , command, args = {}] = found[this.pick] ?? [];
       if (!command) return;
+      if (MODES[command]) {
+        this.query = null;
+        this.mode = MODES[command];
+        return cx.notify();
+      }
       this.dismiss();
       return run(command, args);
     } else if (e.key === "down" || (m.control && (e.key === "n" || e.key === "j"))) this.pick = Math.min(this.pick + 1, found.length - 1);
@@ -157,10 +175,29 @@ export default class TmuxPrefix extends View {
     cx.notify();
   }
 
+  // Sticky modes: h/j/k/l or arrows act, Shift varies it (move: swap, resize: fine step);
+  // Esc, Enter or any other key leaves.
+  modeKey(e, cx) {
+    const m = e.modifiers;
+    if (m.control || m.alt || m.platform) return this.dismiss();
+    const lower = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const direction = MOVE_KEYS[lower];
+    if (!direction) return this.dismiss();
+    const shifted = m.shift && e.key.length === 1;
+    const [command, args] = this.mode === "resize"
+      ? ["pane.resize", { direction, px: shifted ? RESIZE_FINE_PX : RESIZE_PX }]
+      : [shifted ? "pane.swap" : "pane.go", { direction }];
+    cx.spawn(async (cx) => {
+      await run(command, args);
+      cx.notify();
+    });
+  }
+
   key(e, cx) {
     cx.stop_propagation();
     const m = e.modifiers;
     if (this.query != null) return this.searchKey(e, cx);
+    if (this.mode) return this.modeKey(e, cx);
     if (e.key === "escape") return this.dismiss();
     if (m.control && e.key === "b") return this.sendPrefix(cx);
     if (m.alt && !m.control && !m.platform) {
@@ -197,6 +234,12 @@ export default class TmuxPrefix extends View {
       return this.dismiss();
     }
     const [, , command, args = {}, repeatable = false] = binding;
+    if (MODES[command]) {
+      this.mode = MODES[command];
+      this.generation++;
+      cx.notify();
+      return;
+    }
     if (!repeatable) this.dismiss();
     run(command, args);
     if (repeatable) {
@@ -219,6 +262,21 @@ export default class TmuxPrefix extends View {
 
   render() {
     const t = theme();
+    // A sticky mode is a one-line bar naming the focused pane: Herdr hides the
+    // focus border while this popup holds the keyboard.
+    if (this.mode) {
+      const resize = this.mode === "resize";
+      const p = panes().find((x) => x.pane === focused()?.pane);
+      const name = p ? ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell" : "—";
+      return h_flex().id("tmux-prefix").track_focus(this.handle)
+        .on_key_down((e, cx) => this.key(e, cx))
+        .px(14).py(6).gap(10).items_center().bg(t.popover).text_color(t.foreground).text_size(12)
+        .child(div().font_semibold().text_color(t.accent).child(resize ? "Resize" : "Move"))
+        .child(div().flex_1().min_w(0).truncate().child(name))
+        .child(div().text_color(t.muted).child(resize
+          ? `hjkl / ←↓↑→ ${RESIZE_PX}px · HJKL ${RESIZE_FINE_PX}px · Esc done`
+          : "hjkl / ←↓↑→ focus · HJKL swap · Esc done"));
+    }
     const searching = this.query != null;
     const head = searching
       ? h_flex().gap(6).items_center().child(div().text_color(t.accent).child("/")).child(div().flex_1().child(`${this.query}▏`))

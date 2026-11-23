@@ -56,7 +56,7 @@ The whole window uses no titlebar, macOS traffic lights at (12, 16), window blur
 - **Numbered keys.** These are collapsed into summary rows: `0–9` Tab 1–10, `←↓↑→` Focus pane, `!–(` Space 1–9. `?` expands them into one row per key.
 - **Keys:**
   - Tabs: `c` new tab, `T` rename, `X` close, `n`/`p` next/previous (repeat).
-  - Panes: `v` split right, `-` or `"` split down, `x` close pane, `z` zoom, `h j k l` or arrows to focus (repeat), `H`/`L` swap (repeat).
+  - Panes: `v` split right, `-` or `"` split down, `x` close pane, `z` zoom, `h j k l` or arrows to focus, `H`/`L` swap, `m` move mode (sticky: `h j k l` or arrows focus, `H J K L` swap, `Esc` or any other key leaves), `r` resize mode (sticky: `h j k l` or arrows move the pane border 40px, `H J K L` 10px; needs Herdr 0.1.17 `pane.resize`).
   - Spaces: `]`/`[` next/previous (repeat), `N` new, `W` rename, `D` close.
   - Agents: `J`/`K` next/previous (repeat), `a` agents board, `⌥1–9` focus agent N (the sidebar's numbers).
   - App: `w`/`g` picker, `b` sidebar rail toggle, `B` hide the sidebar, `s` settings, `q`/`d` minimize, `⌥g` lazygit in a new terminal.
