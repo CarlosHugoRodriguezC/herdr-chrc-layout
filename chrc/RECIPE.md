@@ -110,7 +110,7 @@ The whole window uses no titlebar, macOS traffic lights at (12, 16), window blur
 - **Lazygit.** `⌥g` assumes `lazygit` is installed.
 - **Sizes and counts.** Only the first 9 agents get an Alt shortcut. The prefix columns are sized for a 980px popup; the numbered keys expanded with `?` scroll inside their column.
 - **Theme.** The look depends on window blur and transparent colors; with blur off, the sidebar and canvas are just dark.
-- **Theme file.** Herdr does not ship `catppuccin-mocha`; the layout needs `themes/catppuccin-mocha.json` (official Mocha palette: background `#1e1e2e`, foreground `#cdd6f4`, selection `#585b70`, cursor `#f5e0dc`, Mocha ANSI colors). Without it the layout is refused and `layout.error` says so.
+- **Theme file.** Herdr does not ship `catppuccin-mocha`; the layout needs `themes/catppuccin-mocha.json` (official Mocha palette: background `#1e1e2e`, foreground `#cdd6f4`, selection `#45475a`, cursor `#f5e0dc`, Mocha ANSI colors, plus a `colors` block for the UI: mauve `#cba6f7` accent, `#181825` canvas and chrome, Mocha surfaces and status colors). Without it the layout is refused and `layout.error` says so.
 
 ## Done when
 
