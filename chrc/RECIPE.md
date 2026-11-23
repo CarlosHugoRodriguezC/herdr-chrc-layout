@@ -110,10 +110,11 @@ The whole window uses no titlebar, macOS traffic lights at (12, 16), window blur
 - **Lazygit.** `⌥g` assumes `lazygit` is installed.
 - **Sizes and counts.** Only the first 9 agents get an Alt shortcut. The prefix columns are sized for a 980px popup; the numbered keys expanded with `?` scroll inside their column.
 - **Theme.** The look depends on window blur and transparent colors; with blur off, the sidebar and canvas are just dark.
+- **Theme file.** Herdr does not ship `catppuccin-mocha`; the layout needs `themes/catppuccin-mocha.json` (official Mocha palette: background `#1e1e2e`, foreground `#cdd6f4`, selection `#585b70`, cursor `#f5e0dc`, Mocha ANSI colors). Without it the layout is refused and `layout.error` says so.
 
 ## Done when
 
-- `herdr-app check` passes for `mods/ordered-agents`, `mods/tmux-prefix` and `mods/agents-board`, and `layout.switch {"name":"chrc"}` shows the sidebar, tab bar, rounded pane cards and status bar.
+- `herdr-app check` passes for `mods/ordered-agents`, `mods/tmux-prefix` and `mods/agents-board`, `themes/catppuccin-mocha.json` is in place, no `layout.error` is written, and `layout.switch {"name":"chrc"}` shows the sidebar, tab bar, rounded pane cards and status bar.
 - With three agents running, the sidebar numbers them 1–3 in the order they were opened. When one finishes, its pill changes from "Working" to "Done" without the cards reordering.
 - `Ctrl+B` then `⌥1` focuses the agent numbered 1 in the sidebar.
 - `Ctrl+B` shows all five columns with no scrolling. `/split` lists "Split right" and "Split down", and `Enter` splits the pane.
